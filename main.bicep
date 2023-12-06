@@ -21,8 +21,8 @@ param subnetPrefix string = '10.0.0.0/24'
 param cosmosDbAccountName string = 'final-project-cosmosdb'
 param cosmosDbConsistencyLevel string = 'Session'
 param cosmosDbDatabaseName string = 'Users'
-param cosmosDbContainerName string = 'items'
-param cosmosDbPartitionKey string = '/lastName'
+param cosmosDbContainerName string = 'Items'
+param cosmosDbPartitionKey string = '/LastName'
 
 // Parameters for the private endpoint
 param privateEndpointName string = 'final-project-private-endpoint'
