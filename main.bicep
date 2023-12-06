@@ -28,7 +28,7 @@ param cosmosDbPartitionKey string = '/LastName'
 param privateEndpointName string = 'final-project-private-endpoint'
 
 // Parameters for the API Management
-param apiManagementName string = 'final-project-api-management-v1'
+param apiManagementName string = 'final-project-api-management-v3'
 
 // Parameters for the Application Insights
 param applicationInsightsName string = 'final-project-appinsights'

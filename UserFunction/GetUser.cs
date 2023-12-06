@@ -27,7 +27,7 @@ namespace UserFunction
 
             Container container = client.GetDatabase("Users").GetContainer("items");
 
-            log.LogInformation($"Searching for User Count");
+            log.LogInformation("Searching for User Count");
 
             QueryDefinition queryDefinition = new QueryDefinition("SELECT value Count(i) FROM items i");
 
