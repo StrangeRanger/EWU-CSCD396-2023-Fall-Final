@@ -5,7 +5,6 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.37.0" />
-        <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.20.0" />
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.CosmosDb" Version="4.4.2" />
         <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.CosmosDB" Version="4.4.2" />
         <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.2.0" />
