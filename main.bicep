@@ -3,6 +3,9 @@
 // Parameters for location of all resources
 param location string = 'westus3'
 
+// IP address for the Cosmos DB firewall
+param myIpAddress string = '185.216.231.192'
+
 // Parameters for the function app
 param functionAppName string = 'final-project-functionapp'
 param functionAppNamePlan string = 'final-project-functionapp-plan'
@@ -20,14 +23,14 @@ param subnetPrefix string = '10.0.0.0/24'
 param cosmosDbAccountName string = 'final-project-cosmosdb'
 param cosmosDbConsistencyLevel string = 'Session'
 param cosmosDbDatabaseName string = 'Users'
-param cosmosDbContainerName string = 'Items'
+param cosmosDbContainerName string = 'items'
 param cosmosDbPartitionKey string = '/LastName'
 
 // Parameters for the private endpoint
 param privateEndpointName string = 'final-project-private-endpoint'
 
 // Parameters for the API Management
-param apiManagementName string = 'final-project-api-management'
+param apiManagementName string = 'final-project-api-management-v6'
 
 // Parameters for the Application Insights
 param applicationInsightsName string = 'final-project-function-appinsights'
@@ -77,6 +80,17 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2021-03-15' = {
   kind: 'GlobalDocumentDB'
   properties: {
     databaseAccountOfferType: 'Standard'
+    isVirtualNetworkFilterEnabled: true
+    publicNetworkAccess: 'Enabled'
+    networkAclBypass: 'AzureServices'
+    networkAclBypassResourceIds: [
+      // Resource IDs for Azure services that need to bypass the firewall
+    ]
+    ipRules: [
+      {
+        ipAddressOrRange: myIpAddress
+      }
+    ]
     consistencyPolicy: {
       defaultConsistencyLevel: cosmosDbConsistencyLevel
     }
@@ -196,6 +210,10 @@ resource functionApp 'Microsoft.Web/sites@2021-02-01' = {
           name: 'FUNCTIONS_EXTENSION_VERSION'
           value: '~4'
         }
+        {
+          name: 'GithubOAuthToken'
+          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/GitHubOAuthToken)'
+        }
       ]
     }
   }
@@ -208,12 +226,6 @@ resource functionApp 'Microsoft.Web/sites@2021-02-01' = {
       isGitHubAction: false
       deploymentRollbackEnabled: false
       isMercurial: false
-    }
-  }
-  resource appSettings 'config' = {
-    name: 'appsettings'
-    properties: {
-      GitHubOAuthToken: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/GitHubOAuthToken)'
     }
   }
 }
@@ -264,19 +276,19 @@ resource applicationInsightsForAPIM 'Microsoft.Insights/components@2020-02-02' =
   }
 }
 
-// API Management API linked to the Azure Function
-resource api 'Microsoft.ApiManagement/service/apis@2021-04-01-preview' = {
-  parent: apiManagement
-  name: 'myFunctionApi'
-  properties: {
-    displayName: 'Function API'
-    path: 'functionapi'
-    serviceUrl: 'https://${functionApp.properties.defaultHostName}'
-    protocols: [
-      'https'
-    ]
-  }
-}
+// // API Management API linked to the Azure Function
+// resource api 'Microsoft.ApiManagement/service/apis@2021-04-01-preview' = {
+//   parent: apiManagement
+//   name: 'myFunctionApi'
+//   properties: {
+//     displayName: 'Function API'
+//     path: 'functionapi'
+//     serviceUrl: 'https://${functionApp.properties.defaultHostName}'
+//     protocols: [
+//       'https'
+//     ]
+//   }
+// }
 
 // API Management Operation linked to the Azure Function
 resource apiManagementLogger 'Microsoft.ApiManagement/service/loggers@2021-04-01-preview' = {
@@ -290,3 +302,27 @@ resource apiManagementLogger 'Microsoft.ApiManagement/service/loggers@2021-04-01
     }
   }
 }
+
+// // API Management Operation linked to the Azure Function
+// resource getRandomUser 'Microsoft.ApiManagement/service/apis/operations@2021-04-01-preview' = {
+//   parent: api
+//   name: 'GetRandomUser'
+//   properties: {
+//     displayName: 'Get Random User'
+//     method: 'GET'
+//     urlTemplate: '/GetRandomUser'
+//     // ... other settings
+//   }
+// }
+
+// // API Management Operation linked to the Azure Function
+// resource addUser 'Microsoft.ApiManagement/service/apis/operations@2021-04-01-preview' = {
+//   parent: api
+//   name: 'AddUser'
+//   properties: {
+//     displayName: 'Add User'
+//     method: 'POST'
+//     urlTemplate: '/AddUser'
+//     // ... other settings
+//   }
+// }
