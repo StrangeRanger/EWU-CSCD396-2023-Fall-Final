@@ -1,8 +1,10 @@
+// ------ [ Azure Parameters ] ------ //
+
 param location string = 'westus3'
 
-// Parameters for the web app
-param webAppName string = 'final-project-webapp'
-param webAppNamePlan string = 'final-project-webapp-plan'
+// // Parameters for the web app
+// param webAppName string = 'final-project-webapp'
+// param webAppNamePlan string = 'final-project-webapp-plan'
 
 // Parameters for the function app
 param functionAppName string = 'final-project-functionapp'
@@ -36,6 +38,8 @@ param applicationInsightsName string = 'final-project-appinsights'
 // Parameters for the Log Analytics workspace
 param logAnalyticsWorkspaceName string = 'final-project-loganalytics-workspace'
 
+// ------ [ Azure Resources ] ------ //
+// ------------------- [ Cosmos DB ] ------------------- //
 
 // Create Virtual Network
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-02-01' = {
@@ -134,6 +138,29 @@ resource cosmosDbContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
   }
 }
 
+// ------------------- [ Web App ] ------------------- //
+
+// // Create an App Service Plan
+// resource appServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
+//   name: webAppNamePlan
+//   location: location
+//   sku: {
+//     name: 'P1v2' // Pricing tier for the App Service Plan
+//   }
+// }
+
+// // Create a Web App
+// resource webApp 'Microsoft.Web/sites@2021-02-01' = {
+//   name: webAppName
+//   location: location
+//   properties: {
+//     serverFarmId: appServicePlan.id
+//     httpsOnly: true
+//   }
+// }
+
+// ------------------- [ Azure Function ] ------------------- //
+
 // Create a storage account for the Azure Function
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   // Set minimumTlsVersion to disable support for older TLS versions
@@ -148,39 +175,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   }
 }
 
-// Create an App Service Plan
-resource appServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
-  name: webAppNamePlan
-  location: location
-  sku: {
-    name: 'P1v2' // Pricing tier for the App Service Plan
-  }
-}
-
-// Create a Web App
-resource webApp 'Microsoft.Web/sites@2021-02-01' = {
-  name: webAppName
-  location: location
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-  }
-}
-
-// Create an API Management service
-resource apiManagement 'Microsoft.ApiManagement/service@2021-04-01-preview' = {
-  name: apiManagementName
-  location: location
-  sku: {
-    name: 'Consumption' // Pricing tier for the API Management service
-    capacity: 0
-  }
-  properties: {
-    publisherEmail: 'email@example.com'
-    publisherName: 'PublisherName'
-  }
-}
-
 // Create the Function App service plan
 resource functionAppServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
   name: functionAppNamePlan
@@ -188,27 +182,6 @@ resource functionAppServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
   sku: {
     name: 'Y1'
     tier: 'Dynamic'
-  }
-}
-
-// Create a Log Analytics workspace
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
-  name: logAnalyticsWorkspaceName
-  location: location
-  properties: {
-    // Workspace properties
-  }
-}
-
-// Create Application Insights for monitoring
-resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: applicationInsightsName
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logAnalyticsWorkspace.id // Link to Log Analytics Workspace
-    // Other properties as needed
   }
 }
 
@@ -247,6 +220,55 @@ resource functionApp 'Microsoft.Web/sites@2021-02-01' = {
   }
 }
 
+// ------------------- [ API Management ] ------------------- //
+
+// Create an API Management service
+resource apiManagement 'Microsoft.ApiManagement/service@2021-04-01-preview' = {
+  name: apiManagementName
+  location: location
+  sku: {
+    name: 'Consumption' // Pricing tier for the API Management service
+    capacity: 0
+  }
+  properties: {
+    publisherEmail: 'email@example.com'
+    publisherName: 'PublisherName'
+  }
+}
+
+// ------------------- [ Anaylitics/Insight/Workspace ] ------------------- //
+
+// Create a Log Analytics workspace
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
+  name: logAnalyticsWorkspaceName
+  location: location
+  properties: {
+    // Workspace properties
+  }
+}
+
+// Create Application Insights for monitoring
+resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
+  name: applicationInsightsName
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalyticsWorkspace.id // Link to Log Analytics Workspace
+    // Other properties as needed
+  }
+}
+
+resource applicationInsightsForAPIM 'Microsoft.Insights/components@2020-02-02' = {
+  name: 'apim-appinsights'
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: logAnalyticsWorkspace.id
+  }
+}
+
 // API Management API linked to the Azure Function
 resource api 'Microsoft.ApiManagement/service/apis@2021-04-01-preview' = {
   parent: apiManagement
@@ -261,3 +283,14 @@ resource api 'Microsoft.ApiManagement/service/apis@2021-04-01-preview' = {
   }
 }
 
+resource apiManagementLogger 'Microsoft.ApiManagement/service/loggers@2021-04-01-preview' = {
+  parent: apiManagement
+  name: 'apim-logger'
+  properties: {
+    loggerType: 'applicationInsights'
+    description: 'Logger for APIM'
+    credentials: {
+      instrumentationKey: applicationInsightsForAPIM.properties.InstrumentationKey
+    }
+  }
+}

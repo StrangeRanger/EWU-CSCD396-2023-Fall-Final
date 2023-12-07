@@ -19,7 +19,7 @@ namespace UserFunction
         public static async Task<IActionResult> RunAsync(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             [
-                CosmosDB(databaseName: "Users", containerName: "Items", Connection = "CosmosDBConnection")
+                CosmosDB(databaseName: "Users", containerName: "Items", Connection = "CosmosDBConnectionString")
             ] CosmosClient client,
             ILogger log)
         {
