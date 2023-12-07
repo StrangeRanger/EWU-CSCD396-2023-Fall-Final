@@ -17,7 +17,7 @@ public class AddUser
     public static async Task<IActionResult> RunAsync(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
         [
-            CosmosDB(databaseName: "Users", containerName: "Items", Connection = "CosmosDBConnectionString")
+            CosmosDB(databaseName: "Users", containerName: "Items", Connection = "CosmosDBConnection")
         ] IAsyncCollector<dynamic> documents,
         ILogger log)
     {

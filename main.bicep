@@ -1,10 +1,7 @@
 // ------ [ Azure Parameters ] ------ //
 
+// Parameters for location of all resources
 param location string = 'westus3'
-
-// // Parameters for the web app
-// param webAppName string = 'final-project-webapp'
-// param webAppNamePlan string = 'final-project-webapp-plan'
 
 // Parameters for the function app
 param functionAppName string = 'final-project-functionapp'
@@ -30,15 +27,26 @@ param cosmosDbPartitionKey string = '/LastName'
 param privateEndpointName string = 'final-project-private-endpoint'
 
 // Parameters for the API Management
-param apiManagementName string = 'final-project-api-management-v3'
+param apiManagementName string = 'final-project-api-management'
 
 // Parameters for the Application Insights
-param applicationInsightsName string = 'final-project-appinsights'
+param applicationInsightsName string = 'final-project-function-appinsights'
+param applicationInsightsForAPIMName string = 'final-project-apim-appinsights'
 
 // Parameters for the Log Analytics workspace
 param logAnalyticsWorkspaceName string = 'final-project-loganalytics-workspace'
 
+// Parameters for the Key Vault
+param keyVaultName string = 'final-project-keyvault'
+
 // ------ [ Azure Resources ] ------ //
+// ------------------- [ Key Vault ] ------------------- //
+
+// ...
+resource keyVault 'Microsoft.KeyVault/vaults@2021-06-01-preview' existing = {
+  name: keyVaultName
+}
+
 // ------------------- [ Cosmos DB ] ------------------- //
 
 // Create Virtual Network
@@ -112,7 +120,7 @@ resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
       id: cosmosDbDatabaseName
     }
     options: {
-      throughput: 1000 // Optional: Specify throughput
+      throughput: 1000
     }
   }
 }
@@ -130,40 +138,14 @@ resource cosmosDbContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
         ]
         kind: 'Hash'
       }
-      // Other container properties as needed
-    }
-    options: {
-      // Container options like throughput
     }
   }
 }
-
-// ------------------- [ Web App ] ------------------- //
-
-// // Create an App Service Plan
-// resource appServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
-//   name: webAppNamePlan
-//   location: location
-//   sku: {
-//     name: 'P1v2' // Pricing tier for the App Service Plan
-//   }
-// }
-
-// // Create a Web App
-// resource webApp 'Microsoft.Web/sites@2021-02-01' = {
-//   name: webAppName
-//   location: location
-//   properties: {
-//     serverFarmId: appServicePlan.id
-//     httpsOnly: true
-//   }
-// }
 
 // ------------------- [ Azure Function ] ------------------- //
 
 // Create a storage account for the Azure Function
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
-  // Set minimumTlsVersion to disable support for older TLS versions
   properties: {
     minimumTlsVersion: 'TLS1_2'
   }
@@ -203,19 +185,35 @@ resource functionApp 'Microsoft.Web/sites@2021-02-01' = {
           value: 'dotnet'
         }
         {
-          name: 'CosmosDBConnectionString'
+          name: 'CosmosDBConnection'
           value: 'AccountEndpoint=https://${cosmosDbAccountName}.documents.azure.com:443/;AccountKey=${cosmosDbAccount.listKeys().primaryMasterKey};'
         }
-        // Add the Application Insights instrumentation key
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
           value: applicationInsights.properties.InstrumentationKey
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
-          value: '~4' // Set the Functions runtime version to ~4
+          value: '~4'
         }
       ]
+    }
+  }
+  resource sourceControl 'sourcecontrols' = {
+    name: 'web'
+    properties: {
+      repoUrl: 'https://github.com/StrangeRanger/EWU-CSCD396-2023-Fall-Final'
+      branch: 'main'
+      isManualIntegration: false
+      isGitHubAction: false
+      deploymentRollbackEnabled: false
+      isMercurial: false
+    }
+  }
+  resource appSettings 'config' = {
+    name: 'appsettings'
+    properties: {
+      GitHubOAuthToken: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/GitHubOAuthToken)'
     }
   }
 }
@@ -227,7 +225,7 @@ resource apiManagement 'Microsoft.ApiManagement/service@2021-04-01-preview' = {
   name: apiManagementName
   location: location
   sku: {
-    name: 'Consumption' // Pricing tier for the API Management service
+    name: 'Consumption'
     capacity: 0
   }
   properties: {
@@ -242,25 +240,22 @@ resource apiManagement 'Microsoft.ApiManagement/service@2021-04-01-preview' = {
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-08-01' = {
   name: logAnalyticsWorkspaceName
   location: location
-  properties: {
-    // Workspace properties
-  }
 }
 
-// Create Application Insights for monitoring
+// Create Application Insights for monitoring the Azure Function
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: applicationInsightsName
   location: location
   kind: 'web'
   properties: {
     Application_Type: 'web'
-    WorkspaceResourceId: logAnalyticsWorkspace.id // Link to Log Analytics Workspace
-    // Other properties as needed
+    WorkspaceResourceId: logAnalyticsWorkspace.id
   }
 }
 
+// Create Application Insights for API Management
 resource applicationInsightsForAPIM 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'apim-appinsights'
+  name: applicationInsightsForAPIMName
   location: location
   kind: 'web'
   properties: {
@@ -283,6 +278,7 @@ resource api 'Microsoft.ApiManagement/service/apis@2021-04-01-preview' = {
   }
 }
 
+// API Management Operation linked to the Azure Function
 resource apiManagementLogger 'Microsoft.ApiManagement/service/loggers@2021-04-01-preview' = {
   parent: apiManagement
   name: 'apim-logger'
