@@ -30,11 +30,10 @@ param cosmosDbPartitionKey string = '/LastName'
 param privateEndpointName string = 'final-project-private-endpoint'
 
 // Parameters for the API Management
-param apiManagementName string = 'final-project-api-management-v6'
+param apiManagementName string = 'final-project-api-management-v7'
 
 // Parameters for the Application Insights
 param applicationInsightsName string = 'final-project-function-appinsights'
-param applicationInsightsForAPIMName string = 'final-project-apim-appinsights'
 
 // Parameters for the Log Analytics workspace
 param logAnalyticsWorkspaceName string = 'final-project-loganalytics-workspace'
@@ -83,9 +82,6 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2021-03-15' = {
     isVirtualNetworkFilterEnabled: true
     publicNetworkAccess: 'Enabled'
     networkAclBypass: 'AzureServices'
-    networkAclBypassResourceIds: [
-      // Resource IDs for Azure services that need to bypass the firewall
-    ]
     ipRules: [
       {
         ipAddressOrRange: myIpAddress
@@ -265,64 +261,16 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// Create Application Insights for API Management
-resource applicationInsightsForAPIM 'Microsoft.Insights/components@2020-02-02' = {
-  name: applicationInsightsForAPIMName
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logAnalyticsWorkspace.id
-  }
-}
-
-// // API Management API linked to the Azure Function
-// resource api 'Microsoft.ApiManagement/service/apis@2021-04-01-preview' = {
-//   parent: apiManagement
-//   name: 'myFunctionApi'
-//   properties: {
-//     displayName: 'Function API'
-//     path: 'functionapi'
-//     serviceUrl: 'https://${functionApp.properties.defaultHostName}'
-//     protocols: [
-//       'https'
-//     ]
-//   }
-// }
-
-// API Management Operation linked to the Azure Function
-resource apiManagementLogger 'Microsoft.ApiManagement/service/loggers@2021-04-01-preview' = {
+// API Management API linked to the Azure Function
+resource api 'Microsoft.ApiManagement/service/apis@2021-04-01-preview' = {
   parent: apiManagement
-  name: 'apim-logger'
+  name: 'myFunctionApi'
   properties: {
-    loggerType: 'applicationInsights'
-    description: 'Logger for APIM'
-    credentials: {
-      instrumentationKey: applicationInsightsForAPIM.properties.InstrumentationKey
-    }
+    displayName: 'Function API'
+    path: 'functionapi'
+    serviceUrl: 'https://${functionApp.properties.defaultHostName}'
+    protocols: [
+      'https'
+    ]
   }
 }
-
-// // API Management Operation linked to the Azure Function
-// resource getRandomUser 'Microsoft.ApiManagement/service/apis/operations@2021-04-01-preview' = {
-//   parent: api
-//   name: 'GetRandomUser'
-//   properties: {
-//     displayName: 'Get Random User'
-//     method: 'GET'
-//     urlTemplate: '/GetRandomUser'
-//     // ... other settings
-//   }
-// }
-
-// // API Management Operation linked to the Azure Function
-// resource addUser 'Microsoft.ApiManagement/service/apis/operations@2021-04-01-preview' = {
-//   parent: api
-//   name: 'AddUser'
-//   properties: {
-//     displayName: 'Add User'
-//     method: 'POST'
-//     urlTemplate: '/AddUser'
-//     // ... other settings
-//   }
-// }
