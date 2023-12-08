@@ -1,5 +1,7 @@
 # EWU-CSCD396-2023-Winter-Final
 
+[![Project Tracker](https://img.shields.io/badge/repo%20status-Project%20Tracker-lightgrey)](https://wiki.hthompson.dev/en/project-tracker)
+
 This repository contains the code for an Azure Function, used in my Final for [CSCD 396 class](https://github.com/StrangeRanger/EWU-CSCD396-2023-Fall). In this README, I'll outline the steps to get everything working...
 
 ## Setup
